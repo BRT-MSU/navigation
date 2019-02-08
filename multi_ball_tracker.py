@@ -108,9 +108,6 @@ class FrameProcessor(threading.Thread):
         self.display = display
 
     def run(self):
-        # resize the frame
-        #frame = imutils.resize(frame, width=600)
-
         # convert the frame to HSV
         hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
