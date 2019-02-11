@@ -11,6 +11,9 @@ import imutils
 import cv2
 import threading
 from timeit import default_timer as timer
+import time
+from picamera.array import PiRGBArray
+from picamera import PiCamera
 
 class Ball:
 
@@ -133,14 +136,43 @@ class FrameProcessor(threading.Thread):
         if self.display:
             cv2.putText(self.frame, str("frame: " + str(self.frame_count)),
                     (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow("Frame", self.frame)
+            smaller_frame = cv2.resize(self.frame, (640, 480))
+            
+            cv2.imshow("Frame", smaller_frame)
 
     def get_balls(self):
         if len(self.balls) > 0:
             return self.balls
         return None
 
-def process_video(color_range, camera):
+def process_pi_camera_video(color_range, camera):
+    i = 0
+    total_time = 0
+    raw_capture = PiRGBArray(camera, size=(1920, 1088))
+    time.sleep(0.1)
+    try:
+        for frame in camera.capture_continuous(raw_capture,
+                format="bgr", use_video_port=True):
+            i += 1
+            key = cv2.waitKey(1) & 0xFF
+            # if the 'q' key is pressed, stop the loop
+            if key == ord("q"):
+                break
+            beginning_time = timer()
+            frame_processor = FrameProcessor(frame.array, i, color_range,
+                    args.get("display"))
+            raw_capture.truncate(0)
+            frame_processor.start()
+            frame_processor.join()
+
+            ending_time = timer()
+            total_time += (ending_time - beginning_time)
+            balls = frame_processor.get_balls()
+    except(KeyboardInterrupt):
+        pass
+    print("average frame time:", (total_time/i))
+
+def process_usb_video(color_range, camera):
     i = 0
     total_time = 0
     try:
@@ -167,7 +199,8 @@ def process_video(color_range, camera):
         pass
     print("average frame time:", (total_time/i))
 def main (color_range, camera):
-    process_video(color_range, camera)
+    process_pi_camera_video(color_range, camera)
+    #process_video(color_range, camera)
 
 if __name__ == "__main__":
     # construct the argument parse and parse the arguments
@@ -192,14 +225,9 @@ if __name__ == "__main__":
 
     # if a video path was not supplied, grab the reference
     # to the webcam
-    if not args.get("video", False):
-        camera = cv2.VideoCapture(0)
-
-    # otherwise, grab a reference to the video file
-    else:
-        camera = cv2.VideoCapture(args["video"])
-    # cleanup the camera and close any open windows
+    camera = PiCamera()
+    camera.resolution = (1920, 1080)
+    camera.framerate = 10
     main(color_range, camera)
-    camera.release()
     cv2.destroyAllWindows()
 
