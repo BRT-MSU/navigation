@@ -49,7 +49,7 @@ class Frame:
       (0,0) x->
     """
     def calculate_xyr(self, balls):
-        ordered_balls  = sorted(balls.values())
+        ordered_balls = sorted(balls, key=lambda ball: ball.x)
         angle1 = ratio * math.sqrt(math.pow(balls[0].x - balls[1].x, 2) + math.pow(balls[0].y - balls[1].y, 2))
         angle2 = ratio * math.sqrt(math.pow(balls[1].x - balls[2].x, 2) + math.pow(balls[1].y - balls[2].y, 2))
         num = targetSpacing * sin(angle1+angle2)
