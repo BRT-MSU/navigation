@@ -65,11 +65,13 @@ class Frame:
         num = targetSpacing * sin(angle1+angle2)
         den = (targetSpacing * sin(angle2) / sin(angle1)) - (targetSpacing * cos(angle1+angle2))
         alpha = atan(num/den)
+
         l = targetSpacing * sin(angle1 + alpha) / sin(angle1)   #length from ball to robot
         x = l * sin(alpha)  #x from right-most ball
         y = -l * cos(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
         rotOffset = (balls[1].x - 1640) * ratio
         rotation = servo_angle + rotOffset + alpha + 90
+        master
         return(x,y,rotation)
 
 class CameraCapture(threading.Thread):
