@@ -95,9 +95,9 @@ class ColorProcessor (threading.Thread):
 
     def join(self):
         threading.Thread.join(self)
-	ball = Ball(self.circle_center, self.moment_center, self.radius_circle,
-		self.color, self.color_bounds)
-	return ball
+        ball = Ball(self.circle_center, self.moment_center, self.radius_circle,
+                self.color, self.color_bounds)
+        return ball
 
 class FrameProcessor(threading.Thread):
 
@@ -115,11 +115,10 @@ class FrameProcessor(threading.Thread):
         hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
         # process the frame for every different ball
-        for color in color_range:
+        for color in self.color_range:
             processor = ColorProcessor(hsv, self.frame, color, self.color_range[color])
             self.threads.append(processor)
             processor.start()
-        display = args.get("display")
         for thread in self.threads:
             ball = thread.join()
             if ball.get_radius() > 10:

@@ -4,6 +4,7 @@ import time
 from multi_ball_tracker import FrameProcessor
 import math
 import threading
+import cv2
 
 class Frame:
     """
@@ -56,6 +57,8 @@ class Frame:
       (0,0) x->
     """
     def calculate_xyr(self, balls):
+        if balls is None:
+            return (-1, -1, -1)
         ordered_balls = sorted(balls, key=lambda ball: ball.x)
         angle1 = ratio * math.sqrt(math.pow(balls[0].x - balls[1].x, 2) + math.pow(balls[0].y - balls[1].y, 2))
         angle2 = ratio * math.sqrt(math.pow(balls[1].x - balls[2].x, 2) + math.pow(balls[1].y - balls[2].y, 2))
@@ -77,7 +80,7 @@ class CameraCapture(threading.Thread):
         self.camera = PiCamera()
         self.camera.resolution = (1920, 1080)
         self.camera.framerate = 10
-        self.rawCapture = PiRGBArray(self.camera, size=(1920, 1080))
+        self.raw_capture = PiRGBArray(self.camera, size=(1920, 1080))
         self.color_range = {
             'orange' : { 'lower': (5, 112, 93), 'upper': (70, 255, 255)},
             'green': {'lower': (47, 41, 46), 'upper': (80, 155, 255)},
@@ -90,13 +93,13 @@ class CameraCapture(threading.Thread):
 
     def run(self):
         # capture frames from the camera
-        for frame in self.camera.capture_continuous(rawCapture, format="bgr",
+        for frame in self.camera.capture_continuous(self.raw_capture, format="bgr",
                 use_video_port=True):
             # grab the raw NumPy array representing the image, 
             # then initialize the timestamp
             # and occupied/unoccupied text
             image = frame.array
-            frame_object = Frame(frame, self.color_range)
+            frame_object = Frame(image, self.color_range)
             # show the frame
             cv2.imshow("Frame", image)
             key = cv2.waitKey(1) & 0xFF
@@ -104,7 +107,7 @@ class CameraCapture(threading.Thread):
             frame_object.join_frame()
             self.frame = frame_object
             # clear the stream in preparation for the next frame
-            rawCapture.truncate(0)
+            self.raw_capture.truncate(0)
 
             # if the `q` key was pressed, break from the loop
             if key == ord("q"):
@@ -115,7 +118,7 @@ class CameraCapture(threading.Thread):
     def get_current_position(self):
         if self.frame is not None:
             balls = self.frame.get_balls()
-            return self.frame.get_xyr(balls)
+            return self.frame.calculate_xyr(balls)
         return None                
 
 class Navigation(threading.Thread):
@@ -124,9 +127,11 @@ class Navigation(threading.Thread):
         threading.Thread.__init__(self)
 #        self.autonomy = autonomy
         self.run_flag = True
-        self.camera = CameraCapture()
+        self.camera = None
 
     def run(self):
+        self.camera = CameraCapture()
+        self.camera.start()
         while self.run_flag:
             position = self.camera.get_current_position()
    #         autonomy.update_current_position(position)
