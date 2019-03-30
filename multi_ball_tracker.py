@@ -25,7 +25,7 @@ class Ball:
         self.color = color
         self.hsv = hsv
         self.x = circle_center[0]
-
+        self.y = circle_center[1]
     """
     Get the center of the ball that is identified by the hsv values.
     Note: This uses cv2.minEnclosingCircle(). This result can be
@@ -49,18 +49,15 @@ class Ball:
     def get_color(self):
         return self.color
 
+    def get_x(self):
+        return self.x
+
     def get_hsv(self):
         return self.hsv
     def __eq__(self, other):
             return (self.get_circle_center() == other.get_circle_center() and
                     self.get_radius() == other.get_radius() and
                     self.get_hsv() == other.get_hsv())
-
-    def __lt__(self, other):
-        return self.x < other.x
-
-    def __gt__(self, other):
-        return self.x > other.x
 
     def __str__(self):
         return str(self.color) + " : " + str(self.get_circle_center())
@@ -122,6 +119,7 @@ class FrameProcessor(threading.Thread):
         for thread in self.threads:
             ball = thread.join()
             if ball.get_radius() > 10:
+
                 self.balls[ball.get_color()] = ball
                 if self.display:
                     (x, y) = ball.get_circle_center()
@@ -132,10 +130,11 @@ class FrameProcessor(threading.Thread):
                             (0, 255, 255), 2)
                     cv2.circle(self.frame, ball.get_moment_center(), 5,
                             (0, 0, 255), -1)
+        print("Balls located in frame: ", len(self.balls), "Colors: ", self.balls.keys())
         if self.display:
             cv2.putText(self.frame, str("frame: " + str(self.frame_count)),
                     (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            smaller_frame = cv2.resize(self.frame, (640, 480))
+            smaller_frame = cv2.resize(self.frame, (320, 240))
             
             cv2.imshow("Frame", smaller_frame)
 
@@ -147,7 +146,7 @@ class FrameProcessor(threading.Thread):
 def process_pi_camera_video(color_range, camera):
     i = 0
     total_time = 0
-    raw_capture = PiRGBArray(camera, size=(1920, 1088))
+    raw_capture = PiRGBArray(camera, size=(1920, 1080))
     time.sleep(0.1)
     try:
         for frame in camera.capture_continuous(raw_capture,
@@ -224,7 +223,7 @@ if __name__ == "__main__":
 
     # if a video path was not supplied, grab the reference
     # to the webcam
-    camera = PiCamera()
+    camera = PiCamera(sensor_mode=2)
     camera.resolution = (1920, 1080)
     camera.framerate = 10
     main(color_range, camera)
