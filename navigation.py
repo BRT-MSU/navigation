@@ -60,29 +60,58 @@ class Frame:
         if balls is None:
             return (-1, -1, -1)
         ordered_balls = sorted(balls, key=lambda ball: ball.x)
-        angle1 = ratio * math.sqrt(math.pow(balls[0].x - balls[1].x, 2) + math.pow(balls[0].y - balls[1].y, 2))
-        angle2 = ratio * math.sqrt(math.pow(balls[1].x - balls[2].x, 2) + math.pow(balls[1].y - balls[2].y, 2))
-        num = targetSpacing * sin(angle1+angle2)
-        den = (targetSpacing * sin(angle2) / sin(angle1)) - (targetSpacing * cos(angle1+angle2))
-        alpha = atan(num/den)
-        l = targetSpacing * sin(angle1 + alpha) / sin(angle1)   #length from ball to robot
-        x = l * sin(alpha)  #x from right-most ball
-        y = -l * cos(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
-        rotOffset = (balls[1].x - 1640) * ratio
-        rotation = servo_angle + rotOffset + alpha + 90
-        return(x,y,rotation)
+        angle1, angle2 = self.calcAngles(balls)
+        num = self.targetSpacing * math.sin(angle1+angle2)
+        den = (self.targetSpacing * math.sin(angle2) / math.sin(angle1)) - (self.targetSpacing * math.cos(angle1+angle2))
+        alpha = math.atan(num/den)
+        l = self.targetSpacing * math.sin(angle1 + alpha) / math.sin(angle1)   #length from ball to robot
+        x = l * math.sin(alpha)  #x from right-most ball
+        y = -l * math.cos(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
+        # picturerotOffset = (balls[1].x - 1640) * ratio
+        # rotation = servo_angle + rotOffset + alpha + 90
+        return (x, y)
+
+    def calcAngles(self, balls):
+        HFOV = 62.2 / 2
+        ordered_balls = sorted(balls, key=lambda ball: ball.x)
+        angle1 = 0
+        angle2 = 0
+        relativePos = []
+        tempAngles = []
+        for ball in ordered_balls:
+            relativePos.append(abs(ball.x-540))
+
+        for ball in relativePos:
+            tempAngles.append(math.atan((2*ball*math.tan(math.radians(HFOV)))/1080.))
+
+        #Balls on same side of center
+        if(ordered_balls[0].x <= 540 and ordered_balls[2]<=540) or (ordered_balls[0].x >= 540 and ordered_balls[2]>=540):
+            if ordered_balls[0].x > 540:
+                angle1 = tempAngles[1]-tempAngles[0]
+                angle2 = tempAngles[2]-angle1
+            else:
+                angle2 = tempAngles[2]-tempAngles[1]
+                angle1 = tempAngles[0]-angle1
+        elif(ordered_balls[0].x < 540 and ordered_balls[1] <=540):
+            angle1 = tempAngles[0]+tempAngles[1]
+            angle2 = tempAngles[2]
+        else:
+            angle1 = tempAngles[0]
+            angle2 = tempAngles[1] + tempAngles[2]
+
+        return angle1, angle2
 
 class CameraCapture(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
 
         # initialize the camera and grab a reference to the raw camera capture
-        self.camera = PiCamera()
+        self.camera = PiCamera(sensor_mode=2)
         self.camera.resolution = (1920, 1080)
         self.camera.framerate = 10
         self.raw_capture = PiRGBArray(self.camera, size=(1920, 1080))
         self.color_range = {
-            'orange' : { 'lower': (5, 112, 93), 'upper': (70, 255, 255)},
+            'orange': { 'lower': (5, 112, 93), 'upper': (70, 255, 255)},
             'green': {'lower': (47, 41, 46), 'upper': (80, 155, 255)},
             'blue': {'lower': (93, 139, 89), 'upper': (126, 255, 255)}
         }
@@ -134,6 +163,7 @@ class Navigation(threading.Thread):
         self.camera.start()
         while self.run_flag:
             position = self.camera.get_current_position()
+            print(position)
    #         autonomy.update_current_position(position)
 
 
