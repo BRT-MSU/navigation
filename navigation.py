@@ -25,7 +25,7 @@ class Frame:
         self.frame_count = frame_count
         self.frame_processor = FrameProcessor(frame, frame_count, color_range)
         self.frame_processor.start()
-        print("frame: " +str(frame_count))
+        #print("frame: " +str(frame_count))
     """
     Checks to see if the frame processor has finished calculating
     the location of balls in the frame

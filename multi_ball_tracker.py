@@ -130,7 +130,7 @@ class FrameProcessor(threading.Thread):
                             (0, 255, 255), 2)
                     cv2.circle(self.frame, ball.get_moment_center(), 5,
                             (0, 0, 255), -1)
-        print("Balls located in frame: ", len(self.balls), "Colors: ", self.balls.keys())
+        #print("Balls located in frame: ", len(self.balls), "Colors: ", self.balls.keys())
         if self.display:
             cv2.putText(self.frame, str("frame: " + str(self.frame_count)),
                     (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -168,7 +168,7 @@ def process_pi_camera_video(color_range, camera):
             balls = frame_processor.get_balls()
     except(KeyboardInterrupt):
         pass
-    print("average frame time:", (total_time/i))
+    #print("average frame time:", (total_time/i))
 
 def process_usb_video(color_range, camera):
     i = 0
@@ -195,7 +195,7 @@ def process_usb_video(color_range, camera):
             balls = frame_processor.get_balls()
     except(KeyboardInterrupt):
         pass
-    print("average frame time:", (total_time/i))
+    #print("average frame time:", (total_time/i))
 def main (color_range, camera):
     process_pi_camera_video(color_range, camera)
     #process_video(color_range, camera)
