@@ -5,6 +5,7 @@ from multi_ball_tracker import FrameProcessor
 import math
 import threading
 import cv2
+from collections import OrderedDict
 
 class Frame:
     """
@@ -57,23 +58,30 @@ class Frame:
       (0,0) x->
     """
     def calculate_xyr(self, balls):
-        if balls is None:
+        if balls is None or len(balls) < 3:
             return (-1, -1, -1)
-        ordered_balls = sorted(balls, key=lambda ball: ball.x)
-        angle1, angle2 = self.calcAngles(balls)
-        num = self.targetSpacing * math.sin(angle1+angle2)
-        den = (self.targetSpacing * math.sin(angle2) / math.sin(angle1)) - (self.targetSpacing * math.cos(angle1+angle2))
-        alpha = math.atan(num/den)
-        l = self.targetSpacing * math.sin(angle1 + alpha) / math.sin(angle1)   #length from ball to robot
-        x = l * math.sin(alpha)  #x from right-most ball
-        y = -l * math.cos(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
-        # picturerotOffset = (balls[1].x - 1640) * ratio
-        # rotation = servo_angle + rotOffset + alpha + 90
-        return (x, y)
+        try:
+            angle1, angle2 = self.calcAngles(balls)
+            num = self.targetSpacing * math.sin(angle1+angle2)
+            den = (self.targetSpacing * math.sin(angle2) / math.sin(angle1)) - (self.targetSpacing * math.cos(angle1+angle2))
+            alpha = math.atan(num/den)
+            l = self.targetSpacing * math.sin(angle1 + alpha) / math.sin(angle1)   #length from ball to robot
+            x = l * math.sin(alpha)  #x from right-most ball
+            y = -l * math.cos(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
+            # picturerotOffset = (balls[1].x - 1640) * ratio
+            # rotation = servo_angle + rotOffset + alpha + 90
+            return (x, y)
+        except:
+            print("You done goofed")
 
     def calcAngles(self, balls):
         HFOV = 62.2 / 2
-        ordered_balls = sorted(balls, key=lambda ball: ball.x)
+        ordered_balls = []
+        if balls["green"].x > balls["orange"]:
+            ordered_balls = {balls["orange"], balls["green"], balls["blue"]}
+        else:
+            ordered_balls = {balls["blue"], balls["green"], balls["orange"]}
+        print(ordered_balls)
         angle1 = 0
         angle2 = 0
         relativePos = []
@@ -133,7 +141,9 @@ class CameraCapture(threading.Thread):
             cv2.imshow("Frame", image)
             key = cv2.waitKey(1) & 0xFF
 
+            #frame_object.start()
             frame_object.join_frame()
+            
             self.frame = frame_object
             # clear the stream in preparation for the next frame
             self.raw_capture.truncate(0)
