@@ -17,11 +17,11 @@ class Frame:
     :param frame_count: optional interger used to describe the frame number
     """
     def __init__(self, frame, color_range, servo_angle=0,
-		target_spacing=82.5, camera_ratio=0.0189634, frame_count=0):
+		target_spacing=78.74, camera_ratio=0.0189634, frame_count=0):
         self.frame = frame
         self.color_range = color_range
         self.servo_angle = servo_angle
-        self.target_spacing = target_spacing
+        self.targetSpacing = target_spacing
         self.camera_ratio = camera_ratio
         self.frame_count = frame_count
         self.frame_processor = FrameProcessor(frame, frame_count, color_range)
@@ -48,7 +48,7 @@ class Frame:
 	    |    A    Starting     B   |                    90
 	    |                          |                     ^
    	BLUE|Ball1a              Ball1b|RED         180 < rotation > 0
-   GREEN|Ball2a              Ball2b|GREEN                v
+       GREEN|Ball2a              Ball2b|GREEN                v
  	 RED|Ball3a              Ball3b|BLUE                270
    	    |                          |
  	    |                          |
@@ -58,30 +58,56 @@ class Frame:
       (0,0) x->
     """
     def calculate_xyr(self, balls):
-        if balls is None or len(balls) < 3:
+        if balls is None:
             return (-1, -1, -1)
-        try:
-            angle1, angle2 = self.calcAngles(balls)
-            num = self.targetSpacing * math.sin(angle1+angle2)
-            den = (self.targetSpacing * math.sin(angle2) / math.sin(angle1)) - (self.targetSpacing * math.cos(angle1+angle2))
-            alpha = math.atan(num/den)
-            l = self.targetSpacing * math.sin(angle1 + alpha) / math.sin(angle1)   #length from ball to robot
-            x = l * math.sin(alpha)  #x from right-most ball
-            y = -l * math.cos(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
+        elif len(balls) < 3:
+            return(-2, -2, -2)
+        
+        #angle1, angle2 = self.calcAngles(balls)
+
+        #HFOV = 62.2 / 2
+        HFOV = 40./2
+        #ratio = 0.032395833333 #x-average
+        #ratio = 0.0555984799934 #dist x-y
+        ratio = 0.03698
+        ordered_balls = []
+        if balls["green"].x > balls["orange"].x:
+            ordered_balls = [balls["orange"], balls["green"], balls["blue"]]
+            
+        else:
+            ordered_balls = [balls["blue"], balls["green"], balls["orange"]]
+
+        #print("Angle1", math.sqrt(math.pow(int(ordered_balls[0].x - ordered_balls[1].x), 2) + math.pow(int(ordered_balls[0].y - ordered_balls[1].y), 2)))
+        #print("Angle2", math.sqrt(math.pow(int(ordered_balls[1].x - ordered_balls[2].x), 2) + math.pow(int(ordered_balls[1].y - ordered_balls[2].y), 2)))
+        #print(math.floor(ordered_balls[0].x), math.floor(ordered_balls[1].x), math.floor(ordered_balls[2].x))
+        angle1 = ratio * math.sqrt(math.pow(int(ordered_balls[0].x - ordered_balls[1].x), 2) + math.pow(int(ordered_balls[0].y - ordered_balls[1].y), 2))
+        angle2 = ratio * math.sqrt(math.pow(int(ordered_balls[1].x - ordered_balls[2].x), 2) + math.pow(int(ordered_balls[1].y - ordered_balls[2].y), 2))
+        angle1*=math.pi/180.
+        angle2*=math.pi/180.
+        
+        
+        num = math.sin(angle1+angle2)
+        den = ( math.sin(angle2) / math.sin(angle1)) - (math.cos(angle1+angle2))
+        alpha = math.atan(num/den)
+        l = self.targetSpacing * math.sin(angle1 + alpha) / math.sin(angle1)   #length from ball to robot
+        x = l * math.cos(alpha)  #x from right-most ball
+        y = -l * math.sin(alpha)  #y from right-most ball (ball[2]). Add constants if you want the origin as shown in picture
             # picturerotOffset = (balls[1].x - 1640) * ratio
             # rotation = servo_angle + rotOffset + alpha + 90
-            return (x, y)
-        except:
-            print("You done goofed")
+        return (x, y)
+        
 
     def calcAngles(self, balls):
-        HFOV = 62.2 / 2
+        #HFOV = 62.2 / 2
+        HFOV = 40./2
         ordered_balls = []
-        if balls["green"].x > balls["orange"]:
-            ordered_balls = {balls["orange"], balls["green"], balls["blue"]}
+        
+        if balls["green"].x > balls["orange"].x:
+            ordered_balls = [balls["orange"], balls["green"], balls["blue"]]
+            
         else:
-            ordered_balls = {balls["blue"], balls["green"], balls["orange"]}
-        print(ordered_balls)
+            ordered_balls = [balls["blue"], balls["green"], balls["orange"]]
+    
         angle1 = 0
         angle2 = 0
         relativePos = []
@@ -93,19 +119,23 @@ class Frame:
             tempAngles.append(math.atan((2*ball*math.tan(math.radians(HFOV)))/1080.))
 
         #Balls on same side of center
-        if(ordered_balls[0].x <= 540 and ordered_balls[2]<=540) or (ordered_balls[0].x >= 540 and ordered_balls[2]>=540):
+        if(ordered_balls[0].x <= 540 and ordered_balls[2].x <= 540) or (ordered_balls[0].x >= 540 and ordered_balls[2].x>=540):
             if ordered_balls[0].x > 540:
-                angle1 = tempAngles[1]-tempAngles[0]
-                angle2 = tempAngles[2]-angle1
+                angle1 = tempAngles[0]-tempAngles[1]
+                angle2 = tempAngles[1]-tempAngles[2]
             else:
-                angle2 = tempAngles[2]-tempAngles[1]
-                angle1 = tempAngles[0]-angle1
-        elif(ordered_balls[0].x < 540 and ordered_balls[1] <=540):
-            angle1 = tempAngles[0]+tempAngles[1]
-            angle2 = tempAngles[2]
+                angle1 = tempAngles[2]-tempAngles[1]
+                angle2 = tempAngles[1]-tempAngles[0]
+        elif(ordered_balls[0].x < 540 and ordered_balls[1].x <=540):
+            angle1 = tempAngles[0]-tempAngles[1]
+            angle2 = tempAngles[2]+tempAngles[1]
         else:
-            angle1 = tempAngles[0]
-            angle2 = tempAngles[1] + tempAngles[2]
+            angle1 = tempAngles[0]+tempAngles[1]
+            angle2 = tempAngles[2]-tempAngles[1]
+
+            print("Arynn owes me $10")
+
+        print("Angles:", 180*angle1/3.14, 180*angle2/3.14)
 
         return angle1, angle2
 
